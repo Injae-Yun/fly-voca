@@ -29,6 +29,55 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
+#: Receptor -> (sign, confidence, basis). Sign is what the receptor does to
+#: its target's excitability, which follows the G protein it couples to:
+#: Gs and Gq raise it, Gi/o lowers it.
+#:
+#: This matters more than it looks. The most strongly expressed peptides in the
+#: expression data -- AstA at 12,781 CPM in hDeltaK, AstC at 10,035 in FB6A,
+#: Mip at 9,082 in FB2I -- are all the invertebrate relatives of vertebrate
+#: *inhibitory* peptides (somatostatin, NPY, galanin). Treating them as
+#: excitatory, as a first pass did, inverts the largest signals in the layer.
+COUPLING = {
+    # Gi/o -- inhibitory
+    "AstA-R1":  (-1, "high",   "cloned off mammalian somatostatin receptors; Gi/o"),
+    "AstA-R2":  (-1, "high",   "cloned off mammalian somatostatin receptors; Gi/o"),
+    "AstC-R1":  (-1, "medium", "somatostatin-like family"),
+    "AstC-R2":  (-1, "high",   "AstC directly inhibits an LNd neuron, Ca imaging"),
+    "NPFR":     (-1, "medium", "NPY-family receptor, canonically Gi/o"),
+    "sNPF-R":   (-1, "medium", "NPY-family receptor, canonically Gi/o"),
+    "MsR1":     (-1, "low",    "myosuppressin, inhibitory by function"),
+    "MsR2":     (-1, "low",    "myosuppressin, inhibitory by function"),
+    "SPR":      (-1, "medium", "Mip/SPR, inhibitory by function"),
+    "RYa-R":    (-1, "low",    "NPY-family homology"),
+    # Gs / Gq -- excitatory
+    "Dh44-R1":  (+1, "high",   "class II GPCR, cAMP and Ca confirmed"),
+    "Dh44-R2":  (+1, "high",   "class II GPCR, cAMP"),
+    "Dh31-R":   (+1, "high",   "class II GPCR, cAMP"),
+    "Pdfr":     (+1, "high",   "class II GPCR, cAMP"),
+    "CrzR":     (+1, "medium", "Gq"),
+    "CapaR":    (+1, "medium", "Gq"),
+    "PK2-R1":   (+1, "medium", "pyrokinin receptor, Gq"),
+    "PK2-R2":   (+1, "medium", "pyrokinin receptor, Gq"),
+    "TkR86C":   (+1, "medium", "tachykinin receptor, Gq"),
+    "TkR99D":   (+1, "medium", "tachykinin receptor, Gq"),
+    "Lkr":      (+1, "medium", "Gq, Ca"),
+    "SIFaR":    (+1, "low",    "Gq"),
+    "CCAP-R":   (+1, "low",    "Gq"),
+    "FMRFaR":   (+1, "low",    "Gq"),
+    "Proc-R":   (+1, "low",    "Gq"),
+    "AkhR":     (+1, "medium", "Gq"),
+    "CNMaR":    (+1, "low",    "Gq, not firmly established"),
+    "ETHR":     (+1, "low",    "Gq"),
+    "CCHa1-R":  (+1, "low",    "not firmly established"),
+    "CCHa2-R":  (+1, "low",    "not firmly established"),
+    "CCKLR-17D1": (+1, "low",  "Gq"),
+    "CCKLR-17D3": (+1, "low",  "Gq"),
+    # not a GPCR: insulin signalling is a receptor tyrosine kinase, acting on a
+    # far slower, trophic timescale than a membrane-potential shift
+    "InR":      (0, "n/a",     "receptor tyrosine kinase, not an excitability shift"),
+}
+
 #: Established Drosophila peptide -> receptor pairs. Verify against FlyBase
 #: before treating any single row as authoritative.
 LIGAND_RECEPTOR = {
@@ -124,10 +173,17 @@ class Field:
     something measured before any of this means anything.
     """
 
-    def __init__(self, meta, peptides=None, tau: float = 20.0, gain: float = 1.0):
+    def __init__(self, meta, peptides=None, tau: float = 20.0, gain: float = 3.0,
+                 half_sat: float = 1.0):
         self.peptides = tuple(peptides or sorted(set(RELEASERS.values())))
         self.tau = tau            # seconds
-        self.gain = gain          # mV per unit concentration
+        # Concentration is passed through c/(c+half_sat) before use, so `gain`
+        # is the millivolt shift a *saturating* peptide produces -- a quantity
+        # with a meaning and a literature range (neuromodulators move resting
+        # potential by a few mV) rather than a free multiplier. Against a 7 mV
+        # gap to threshold, 3 mV is a strong but not absurd modulation.
+        self.gain = gain          # mV at saturation
+        self.half_sat = half_sat
         self.releaser_idx = {}
         for ct, pep in RELEASERS.items():
             if pep not in self.peptides:
@@ -147,9 +203,16 @@ class Field:
             self.c[j] = self.c[j] * decay + k * drive * (1.0 - decay) * self.tau
         return self.c.copy()
 
+    def saturated(self) -> np.ndarray:
+        return self.c / (self.c + self.half_sat)
+
     def v_offset(self, expr: Expression) -> np.ndarray:
-        """Concentrations -> per-neuron shift in resting potential (mV)."""
-        return (expr.weight @ self.c) * self.gain
+        """Concentrations -> per-neuron shift in resting potential (mV).
+
+        `expr.weight` carries the receptor's sign, so an inhibitory peptide
+        lowers excitability rather than raising it.
+        """
+        return (expr.weight @ self.saturated()) * self.gain
 
     def state(self) -> dict:
         return dict(zip(self.peptides, np.round(self.c, 4)))
