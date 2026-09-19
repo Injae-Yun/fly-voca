@@ -30,7 +30,20 @@ from scipy import sparse
 
 @dataclass
 class Params:
-    """Units are mV, ms, Hz throughout."""
+    """Units are mV, ms, Hz throughout.
+
+    `w_syn` departs from the reference's 0.275 mV on purpose. Sweeping it on
+    both connectomes gives the same S-curve -- silence, a steep rise, a plateau
+    -- but ours sits ~0.07 lower on the axis, because our export counts ~25%
+    more synapses per connection. The reference's own 0.275 is not in the middle
+    of its plateau: it is just past its transition (local slope 1.6, against
+    27.8 and 7.1 just below). Matching their absolute firing rate would drag us
+    to w_syn ~0.17, i.e. *deeper* into the unstable region than they ever sit.
+
+    So we match the dynamical regime rather than the number. At 0.20 our slope
+    is 1.6 -- the same gain as the reference at 0.275. Absolute rates stay
+    higher; see core/docs/02-calibration.md.
+    """
     v_0: float = -52.0      # resting potential
     v_rst: float = -52.0    # reset after spike
     v_th: float = -45.0     # spike threshold
@@ -38,7 +51,7 @@ class Params:
     tau: float = 5.0        # synaptic decay
     t_rfc: float = 2.2      # refractory period
     t_dly: float = 1.8      # synaptic delay
-    w_syn: float = 0.275    # mV per synapse  <- the free parameter
+    w_syn: float = 0.20     # mV per synapse  <- the free parameter; see below
     r_poi: float = 150.0    # Hz, stimulation rate
     f_poi: float = 250.0    # stim weight scale; w_syn * f_poi >> threshold gap
     dt: float = 0.1         # integration step
