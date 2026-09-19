@@ -56,6 +56,12 @@ class Params:
     f_poi: float = 250.0    # stim weight scale; w_syn * f_poi >> threshold gap
     dt: float = 0.1         # integration step
 
+    # Spontaneous activity. A silent brain has no state to modulate, and no
+    # real neuron is silent: channel gating is stochastic, vesicles release
+    # spontaneously, and sensory afferents fire without a stimulus.
+    sigma_v: float = 2.0    # mV, stationary sd of membrane noise (0 = off)
+    r_spont: float = 2.0    # Hz, spontaneous drive on sensory afferents
+
 
 def pick_device(device=None) -> torch.device:
     if device is not None:
@@ -66,10 +72,13 @@ def pick_device(device=None) -> torch.device:
 class Brain:
     """A connectome wired up as a spiking network."""
 
-    def __init__(self, W: sparse.csr_matrix, params: Params | None = None, device=None):
+    def __init__(self, W: sparse.csr_matrix, params: Params | None = None,
+                 device=None, spont=None):
         self.p = params or Params()
         self.n = W.shape[0]
         self.device = pick_device(device)
+        #: afferents carrying spontaneous drive; `from_meta` fills this in
+        self.spont = np.asarray([] if spont is None else spont, dtype=np.int64)
 
         # W holds signed synapse counts with rows = presynaptic. The update
         # needs input *per postsynaptic* cell, so store the transpose and scale
@@ -78,6 +87,14 @@ class Brain:
         Wt.sort_indices()
         self._Wt_np = Wt
         self.Wt = self._to_torch(Wt)
+
+    @classmethod
+    def from_meta(cls, W, meta, params: Params | None = None, device=None):
+        """Build with spontaneous afferent drive already wired to the sensory
+        neurons, so the brain has a resting state without the caller
+        remembering to ask for one."""
+        idx = meta[meta["super_class"].isin(["sensory", "sensory_ascending"])]["idx"].values
+        return cls(W, params, device, spont=idx)
 
     def _to_torch(self, m: sparse.csr_matrix) -> torch.Tensor:
         return torch.sparse_csr_tensor(
@@ -96,8 +113,13 @@ class Brain:
 
     @torch.no_grad()
     def run(self, stim=(), t_run: float = 1000.0, n_trials: int = 30,
-            silence=(), seed: int | None = None, r_poi: float | None = None):
-        """Drive `stim` with Poisson input; return spike counts (n, n_trials)."""
+            silence=(), seed: int | None = None, r_poi: float | None = None,
+            spont=()):
+        """Drive `stim` with Poisson input; return spike counts (n, n_trials).
+
+        `spont` names the neurons carrying spontaneous afferent drive at
+        `p.r_spont`; membrane noise at `p.sigma_v` applies to every neuron.
+        """
         p, n, dev = self.p, self.n, self.device
         B = n_trials
         steps = int(round(t_run / p.dt))
@@ -109,6 +131,9 @@ class Brain:
 
         ev = float(np.exp(-p.dt / p.t_mbr))
         eg = float(np.exp(-p.dt / p.tau))
+        # Exact Ornstein-Uhlenbeck step: this keeps the stationary sd equal to
+        # sigma_v regardless of dt, which naive per-step noise does not.
+        noise_amp = p.sigma_v * float(np.sqrt(1.0 - ev * ev))
 
         v = torch.full((n, B), p.v_0, device=dev)
         g = torch.zeros((n, B), device=dev)
@@ -120,6 +145,9 @@ class Brain:
         stim = torch.as_tensor(np.asarray(stim, dtype=np.int64), device=dev)
         if stim.numel():
             rfc[stim] = 0.0
+        spont = self.spont if spont is None else np.asarray(spont, dtype=np.int64)
+        spont = torch.as_tensor(spont, device=dev)
+        rate_sp = p.r_spont * p.dt / 1000.0
 
         # Uniform synaptic delay -> a ring buffer of past spike vectors.
         D = int(round(p.t_dly / p.dt))
@@ -137,9 +165,17 @@ class Brain:
                 fire = torch.rand((stim.numel(), B), device=dev, generator=gen) < rate
                 v[stim] += fire.float() * w_poi
 
+            if spont.numel() and rate_sp > 0:
+                fire = torch.rand((spont.numel(), B), device=dev, generator=gen) < rate_sp
+                v[spont] += fire.float() * w_poi
+
             live = free_at <= t
             target = g + p.v_0
-            v = torch.where(live, target + (v - target) * ev, v)
+            v_next = target + (v - target) * ev
+            if noise_amp:
+                v_next = v_next + noise_amp * torch.randn(
+                    (n, B), device=dev, generator=gen)
+            v = torch.where(live, v_next, v)
             g = torch.where(live, g * eg, g)
 
             fired = live & (v > p.v_th)
