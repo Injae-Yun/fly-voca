@@ -56,6 +56,12 @@ class Params:
     f_poi: float = 250.0    # stim weight scale; w_syn * f_poi >> threshold gap
     dt: float = 0.1         # integration step
 
+    # Brian2's schedule is state-update -> threshold -> synapses -> reset, so a
+    # neuron that spikes discards the input arriving in that same step. Applying
+    # input before the threshold check instead lets it contribute to the spike,
+    # and the difference grows with firing rate.
+    input_after_reset: bool = True
+
     # Spontaneous activity. A silent brain has no state to modulate, and no
     # real neuron is silent: channel gating is stochastic, vesicles release
     # spontaneously, and sensory afferents fire without a stimulus.
@@ -176,8 +182,9 @@ class Brain:
             t = s * p.dt
             k = s % (D + 1)
 
-            g += torch.sparse.mm(Wt, hist[k])
-            hist[k].zero_()
+            if not p.input_after_reset:
+                g += torch.sparse.mm(Wt, hist[k])
+                hist[k].zero_()
 
             if stim.numel():
                 fire = torch.rand((stim.numel(), B), device=dev, generator=gen) < rate
@@ -204,6 +211,11 @@ class Brain:
                 free_at = torch.where(fired, t + rfc.expand(n, B), free_at)
                 counts += fired.int()
                 hist[(s + D) % (D + 1)] = f
+
+            if p.input_after_reset:
+                # delivered after the reset, so a cell that just spiked loses it
+                g += torch.sparse.mm(Wt, hist[k])
+                hist[k].zero_()
 
         if return_state:
             return counts.cpu().numpy(), {"v": v, "g": g, "free_at": free_at,
