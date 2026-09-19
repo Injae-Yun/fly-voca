@@ -114,11 +114,18 @@ class Brain:
     @torch.no_grad()
     def run(self, stim=(), t_run: float = 1000.0, n_trials: int = 30,
             silence=(), seed: int | None = None, r_poi: float | None = None,
-            spont=()):
+            spont=None, v_offset=None, state=None, return_state: bool = False):
         """Drive `stim` with Poisson input; return spike counts (n, n_trials).
 
         `spont` names the neurons carrying spontaneous afferent drive at
         `p.r_spont`; membrane noise at `p.sigma_v` applies to every neuron.
+
+        `v_offset` shifts each neuron's resting potential -- the handle the
+        slow peptidergic layer pulls on, since neuromodulation changes how
+        excitable a cell is rather than delivering spikes to it.
+
+        `state`/`return_state` chain runs, so a long simulation can be stepped
+        in blocks while something slower is recomputed between them.
         """
         p, n, dev = self.p, self.n, self.device
         B = n_trials
@@ -135,10 +142,20 @@ class Brain:
         # sigma_v regardless of dt, which naive per-step noise does not.
         noise_amp = p.sigma_v * float(np.sqrt(1.0 - ev * ev))
 
-        v = torch.full((n, B), p.v_0, device=dev)
-        g = torch.zeros((n, B), device=dev)
+        if v_offset is None:
+            v_rest = torch.full((n, 1), p.v_0, device=dev)
+        else:
+            v_rest = torch.as_tensor(v_offset, device=dev, dtype=torch.float32)
+            v_rest = v_rest.reshape(-1, 1) + p.v_0 if v_rest.ndim == 1 else v_rest + p.v_0
+
         counts = torch.zeros((n, B), dtype=torch.int32, device=dev)
-        free_at = torch.zeros((n, B), device=dev)
+        if state is None:
+            v = v_rest.expand(n, B).clone()
+            g = torch.zeros((n, B), device=dev)
+            free_at = torch.zeros((n, B), device=dev)
+        else:
+            v, g, free_at = (state[k].clone() for k in ("v", "g", "free_at"))
+            free_at = free_at - state["t_end"]          # re-base the clock
 
         # Stimulated neurons have no refractory period in the reference model.
         rfc = torch.full((n, 1), p.t_rfc, device=dev)
@@ -151,7 +168,8 @@ class Brain:
 
         # Uniform synaptic delay -> a ring buffer of past spike vectors.
         D = int(round(p.t_dly / p.dt))
-        hist = torch.zeros((D + 1, n, B), device=dev)
+        hist = (torch.zeros((D + 1, n, B), device=dev) if state is None
+                else state["hist"].clone())
 
         w_poi = p.w_syn * p.f_poi
         for s in range(steps):
@@ -170,7 +188,7 @@ class Brain:
                 v[spont] += fire.float() * w_poi
 
             live = free_at <= t
-            target = g + p.v_0
+            target = g + v_rest
             v_next = target + (v - target) * ev
             if noise_amp:
                 v_next = v_next + noise_amp * torch.randn(
@@ -187,6 +205,9 @@ class Brain:
                 counts += fired.int()
                 hist[(s + D) % (D + 1)] = f
 
+        if return_state:
+            return counts.cpu().numpy(), {"v": v, "g": g, "free_at": free_at,
+                                          "hist": hist, "t_end": steps * p.dt}
         return counts.cpu().numpy()
 
     @staticmethod
