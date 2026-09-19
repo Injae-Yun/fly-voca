@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bodysnatch"
+version = "0.1.0"
+description = "Environment sensing, state decoding, motor feedback and hijacking of a fly connectome"
+requires-python = ">=3.10"
+dependencies = ["flyvoca", "numpy", "pandas", "scipy"]
+
+[tool.setuptools.packages.find]
+include = ["bodysnatch*"]
