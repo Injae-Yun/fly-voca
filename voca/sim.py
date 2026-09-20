@@ -90,6 +90,12 @@ class Brain:
         #: mechanosensors, and firing leg bristles at the olfactory rate is a
         #: fly being permanently touched.
         self.spont_groups = None
+        #: (indices, tau_ms) to give named cells a slower synaptic current
+        #: than the rest. Sustained activity needs a slow recurrent current,
+        #: and in the animal that is a property of particular circuits rather
+        #: than of every synapse -- doc 05 raised tau globally and the compass
+        #: still would not hold a bump.
+        self.tau_per_neuron = None
 
         # W holds signed synapse counts with rows = presynaptic. The update
         # needs input *per postsynaptic* cell, so store the transpose and scale
@@ -149,6 +155,12 @@ class Brain:
 
         ev = float(np.exp(-p.dt / p.t_mbr))
         eg = float(np.exp(-p.dt / p.tau))
+        eg_vec = None
+        if self.tau_per_neuron is not None:
+            idx, tau_slow = self.tau_per_neuron
+            eg_vec = torch.full((n, 1), eg, device=dev)
+            slow_i = torch.as_tensor(np.asarray(idx, dtype=np.int64), device=dev)
+            eg_vec[slow_i] = float(np.exp(-p.dt / float(tau_slow)))
         # Exact Ornstein-Uhlenbeck step: this keeps the stationary sd equal to
         # sigma_v regardless of dt, which naive per-step noise does not.
         noise_amp = p.sigma_v * float(np.sqrt(1.0 - ev * ev))
@@ -217,7 +229,7 @@ class Brain:
                 v_next = v_next + noise_amp * torch.randn(
                     (n, B), device=dev, generator=gen)
             v = torch.where(live, v_next, v)
-            g = torch.where(live, g * eg, g)
+            g = torch.where(live, g * (eg if eg_vec is None else eg_vec), g)
 
             fired = live & (v > p.v_th)
             if bool(fired.any()):
