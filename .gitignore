@@ -15,3 +15,6 @@ results/
 
 # tool session state
 .omc/
+
+# body simulator venv (1.2 GB, flygym + mujoco)
+.venv-body/
