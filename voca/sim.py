@@ -85,6 +85,11 @@ class Brain:
         self.device = pick_device(device)
         #: afferents carrying spontaneous drive; `from_meta` fills this in
         self.spont = np.asarray([] if spont is None else spont, dtype=np.int64)
+        #: [(indices, hz)] when different afferent classes rest at different
+        #: rates. BANC makes this necessary: it adds ~9,000 body
+        #: mechanosensors, and firing leg bristles at the olfactory rate is a
+        #: fly being permanently touched.
+        self.spont_groups = None
 
         # W holds signed synapse counts with rows = presynaptic. The update
         # needs input *per postsynaptic* cell, so store the transpose and scale
@@ -168,9 +173,16 @@ class Brain:
         stim = torch.as_tensor(np.asarray(stim, dtype=np.int64), device=dev)
         if stim.numel():
             rfc[stim] = 0.0
-        spont = self.spont if spont is None else np.asarray(spont, dtype=np.int64)
-        spont = torch.as_tensor(spont, device=dev)
-        rate_sp = p.r_spont * p.dt / 1000.0
+        if self.spont_groups:
+            groups = [(torch.as_tensor(np.asarray(i, dtype=np.int64), device=dev),
+                       hz * p.dt / 1000.0) for i, hz in self.spont_groups]
+            spont = torch.as_tensor(np.array([], dtype=np.int64), device=dev)
+            rate_sp = 0.0
+        else:
+            groups = None
+            spont = self.spont if spont is None else np.asarray(spont, dtype=np.int64)
+            spont = torch.as_tensor(spont, device=dev)
+            rate_sp = p.r_spont * p.dt / 1000.0
 
         # Uniform synaptic delay -> a ring buffer of past spike vectors.
         D = int(round(p.t_dly / p.dt))
@@ -190,7 +202,11 @@ class Brain:
                 fire = torch.rand((stim.numel(), B), device=dev, generator=gen) < rate
                 v[stim] += fire.float() * w_poi
 
-            if spont.numel() and rate_sp > 0:
+            if groups:
+                for gi, grate in groups:
+                    fire = torch.rand((gi.numel(), B), device=dev, generator=gen) < grate
+                    v[gi] += fire.float() * w_poi
+            elif spont.numel() and rate_sp > 0:
                 fire = torch.rand((spont.numel(), B), device=dev, generator=gen) < rate_sp
                 v[spont] += fire.float() * w_poi
 
