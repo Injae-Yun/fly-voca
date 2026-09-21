@@ -79,7 +79,11 @@ class Brain:
     """A connectome wired up as a spiking network."""
 
     def __init__(self, W: sparse.csr_matrix, params: Params | None = None,
-                 device=None, spont=None):
+                 device=None, spont=None, input_scale=None):
+        """`input_scale` (n,) multiplies every synapse onto neuron j by s_j --
+        a per-cell input sensitivity. The one measured proxy is surface area
+        (input resistance ~ 1/area, Codex cell_stats); see doc 19. None keeps
+        the uniform w_syn of every earlier document."""
         self.p = params or Params()
         self.n = W.shape[0]
         self.device = pick_device(device)
@@ -101,6 +105,11 @@ class Brain:
         # needs input *per postsynaptic* cell, so store the transpose and scale
         # into mV once.
         Wt = (W.T.tocsr().astype(np.float32) * np.float32(self.p.w_syn))
+        if input_scale is not None:
+            sc = np.asarray(input_scale, dtype=np.float32).ravel()
+            assert sc.shape == (self.n,)
+            Wt = sparse.diags(sc) @ Wt          # rows of W.T are postsynaptic
+            Wt = Wt.tocsr().astype(np.float32)
         Wt.sort_indices()
         self._Wt_np = Wt
         self.Wt = self._to_torch(Wt)
@@ -150,8 +159,16 @@ class Brain:
         rate = (r_poi if r_poi is not None else p.r_poi) * p.dt / 1000.0
 
         Wt = self._muted(silence) if len(silence) else self.Wt
+        # Two streams: membrane noise + spontaneous drive on `gen`, stimulus
+        # on `gen_stim`. On one stream the stimulus draw advances the state,
+        # so a driven run and its sham diverge in noise from step 0 and a
+        # shared seed pairs nothing. With separate streams the same seed gives
+        # the same background in both.
+        base_seed = torch.seed() if seed is None else seed
         gen = torch.Generator(device=dev)
-        gen.manual_seed(torch.seed() if seed is None else seed)
+        gen.manual_seed(base_seed)
+        gen_stim = torch.Generator(device=dev)
+        gen_stim.manual_seed(base_seed + 1_000_003)
 
         ev = float(np.exp(-p.dt / p.t_mbr))
         eg = float(np.exp(-p.dt / p.tau))
@@ -200,18 +217,22 @@ class Brain:
         D = int(round(p.t_dly / p.dt))
         hist = (torch.zeros((D + 1, n, B), device=dev) if state is None
                 else state["hist"].clone())
+        # Ring-buffer phase. Without carrying it across chained runs, spikes
+        # pending at a block boundary are delivered at whatever slot the new
+        # block's step counter happens to hit -- up to 1.8 ms early or late.
+        k0 = 0 if state is None else int(state.get("k0", 0))
 
         w_poi = p.w_syn * p.f_poi
         for s in range(steps):
             t = s * p.dt
-            k = s % (D + 1)
+            k = (s + k0) % (D + 1)
 
             if not p.input_after_reset:
                 g += torch.sparse.mm(Wt, hist[k])
                 hist[k].zero_()
 
             if stim.numel():
-                fire = torch.rand((stim.numel(), B), device=dev, generator=gen) < rate
+                fire = torch.rand((stim.numel(), B), device=dev, generator=gen_stim) < rate
                 v[stim] += fire.float() * w_poi
 
             if groups:
@@ -238,7 +259,7 @@ class Brain:
                 g = torch.where(fired, torch.zeros_like(g), g)
                 free_at = torch.where(fired, t + rfc.expand(n, B), free_at)
                 counts += fired.int()
-                hist[(s + D) % (D + 1)] = f
+                hist[(s + k0 + D) % (D + 1)] = f
 
             if p.input_after_reset:
                 # delivered after the reset, so a cell that just spiked loses it
@@ -247,7 +268,8 @@ class Brain:
 
         if return_state:
             return counts.cpu().numpy(), {"v": v, "g": g, "free_at": free_at,
-                                          "hist": hist, "t_end": steps * p.dt}
+                                          "hist": hist, "t_end": steps * p.dt,
+                                          "k0": (steps + k0) % (D + 1)}
         return counts.cpu().numpy()
 
     @staticmethod
