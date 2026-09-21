@@ -33,9 +33,10 @@ scripts/            번호순 실험. 10~15 보정 · 20~22 휴지 상태 · 30~
 
 ## 설치
 
+`fly_voca` 루트의 공유 `.venv`를 쓴다.
+
 ```bash
-pip install -e D:/Code/fly_voca/core   # 공유 시뮬레이터·그래프
-pip install -e .
+D:/Code/fly_voca/.venv/Scripts/python.exe -m pip install -e D:/Code/fly_voca/core -e .
 ```
 
 수칙: 조건 간 시드 짝맞춤, 효과 크기는 Cohen's d, sham은 다른 시드의 기저,
