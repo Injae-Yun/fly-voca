@@ -22,7 +22,7 @@ import pandas as pd
 
 from flyvoca.graph import build
 from flyvoca.paths import cache
-from bodysnatch.sim import Brain, Params
+from flyvoca.sim import Brain, Params
 
 W_SYN, TRIALS = 0.20, 10
 

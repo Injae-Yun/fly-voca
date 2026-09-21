@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from flyvoca.graph import build, select
-from bodysnatch.sim import Brain
+from flyvoca.sim import Brain
 
 MN9 = 720575940660219265
 REF_SUGAR = [  # from the reference notebook; one dropped in v783

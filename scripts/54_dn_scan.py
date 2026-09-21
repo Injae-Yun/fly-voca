@@ -20,9 +20,9 @@ import pandas as pd
 
 from flyvoca.graph import build
 from flyvoca.paths import cache
-from bodysnatch.sim import Brain, Params
-from bodysnatch.peptide import Field, Expression
-from bodysnatch.expression import fill, releasers
+from flyvoca.sim import Brain, Params
+from voca.peptide import Field, Expression
+from voca.expression import fill, releasers
 
 TRIALS = 24
 T_RUN = 800.0

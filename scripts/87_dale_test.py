@@ -8,7 +8,7 @@ column), which `flyvoca.graph.build()` uses directly.
 
 This script re-signs the *same* FAFB connectome by neuron instead of by edge
 -- `nt_type` from `neurons.csv.gz`, painted onto every outgoing edge of that
-neuron -- and re-runs the exact benchmark from doc 02 / bodysnatch/scripts/
+neuron -- and re-runs the exact benchmark from doc 02 / voca/scripts/
 14_calibrate_wsyn.py: ref-20 sugar neurons at 100 Hz, w_syn=0.275, sigma_v=0,
 r_spont=0, 30 trials, MN9 readout. If the Dale-signed graph gives a
 similar MN9 rate to the edge-signed one, hypothesis 1 is refuted and BANC's
@@ -27,8 +27,8 @@ from scipy import sparse
 from flyvoca.graph import (build, load_meta, select, FAST_SIGN, SLOW_NT,
                             UNKNOWN_POLICY)
 from flyvoca.paths import dataset
-from bodysnatch.sim import Brain, Params
-from bodysnatch.reference import SUGAR as REF_SUGAR, MN9
+from flyvoca.sim import Brain, Params
+from voca.reference import SUGAR as REF_SUGAR, MN9
 
 W_SYN = 0.275
 SIGMA_V = 0.0

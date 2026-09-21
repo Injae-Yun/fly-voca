@@ -31,8 +31,8 @@ from scipy import sparse
 from scipy.stats import spearmanr
 
 from flyvoca.paths import DATA_ROOT
-from bodysnatch.sim import Brain, Params
-from bodysnatch import reference as ref
+from flyvoca.sim import Brain, Params
+from voca import reference as ref
 
 REF = DATA_ROOT / "reference"
 PUB_MN9, PUB_PEAK, PUB_ACTIVE = 67.0, 114.3, 357

@@ -28,7 +28,7 @@ from scipy import sparse
 
 from flyvoca.graph import build
 from flyvoca.paths import cache
-from bodysnatch.sim import Brain, Params
+from flyvoca.sim import Brain, Params
 
 TRIALS, T = 8, 800.0
 meta, W, _, _ = build()

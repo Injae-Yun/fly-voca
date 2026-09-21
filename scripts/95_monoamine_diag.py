@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 
 from flyvoca.banc_graph import build, select, spontaneous_groups, FAST_SIGN, SLOW
-from bodysnatch.sim import Brain, Params
+from flyvoca.sim import Brain, Params
 
 meta, W, Wslow, st = build()
 nt = meta.neurotransmitter_predicted.astype(str)

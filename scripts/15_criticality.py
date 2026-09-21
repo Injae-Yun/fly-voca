@@ -18,8 +18,8 @@ import numpy as np
 import pandas as pd
 
 from flyvoca.graph import build
-from bodysnatch.sim import Brain, Params
-from bodysnatch import reference as ref
+from flyvoca.sim import Brain, Params
+from voca import reference as ref
 
 W_GRID = (0.12, 0.14, 0.16, 0.18, 0.20, 0.24, 0.275, 0.32)
 

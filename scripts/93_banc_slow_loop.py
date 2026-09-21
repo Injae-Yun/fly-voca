@@ -27,8 +27,8 @@ import pandas as pd
 from flyvoca.banc_graph import build, select, spontaneous_groups
 from flyvoca.banc_peptide import BancField, emitter_index
 from flyvoca.paths import cache
-from bodysnatch.sim import Brain, Params
-from bodysnatch.expression import receptor_to_peptide, load as load_expr, LINES, CONFIDENCE
+from flyvoca.sim import Brain, Params
+from voca.expression import receptor_to_peptide, load as load_expr, LINES, CONFIDENCE
 
 W_SYN, TRIALS, BLOCK, EPOCHS = 0.16, 6, 500.0, 12
 
@@ -43,7 +43,7 @@ print(f"peptides tracked: {len(field.peptides)}  emitters: "
 # ---- receptors: GSE271123 cell types mapped onto BANC ----
 cpm, called, frac = load_expr()
 r2p = receptor_to_peptide()
-from bodysnatch.peptide import COUPLING
+from voca.peptide import COUPLING
 
 pep_i = {p: j for j, p in enumerate(field.peptides)}
 Wr = np.zeros((len(meta), len(field.peptides)), dtype=np.float32)

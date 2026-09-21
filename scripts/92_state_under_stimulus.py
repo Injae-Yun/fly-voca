@@ -25,7 +25,7 @@ import pandas as pd
 
 from flyvoca.banc_graph import build, select, spontaneous_groups
 from flyvoca.paths import cache
-from bodysnatch.sim import Brain, Params
+from flyvoca.sim import Brain, Params
 
 W_SYN, TRIALS, T_RUN, SEED = 0.16, 16, 600.0, 13000
 

@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 from flyvoca.graph import build, select
-from bodysnatch.sim import Brain, Params
+from flyvoca.sim import Brain, Params
 
 MN9 = 720575940660219265
 

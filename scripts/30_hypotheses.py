@@ -18,8 +18,8 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 
-from bodysnatch.sim import Brain, Params
-from bodysnatch import reference as ref
+from flyvoca.sim import Brain, Params
+from voca import reference as ref
 from flyvoca.paths import DATA_ROOT
 
 PUB_MN9, PUB_PEAK = 67.0, 114.3
@@ -61,7 +61,7 @@ for dt in (0.1, 0.05, 0.025):
     print(f"  dt={dt:<6} MN9={m[mn9]:6.1f}  peak={m.max():6.1f}", flush=True)
 
 print("\n=== H3a: do the two FB6A lines disagree broadly, or only on AstC? ===")
-from bodysnatch.expression import load
+from voca.expression import load
 cpm, _ = load()
 a, b_ = cpm["SS54343"], cpm["SS57656"]
 keep = (a + b_) > 10

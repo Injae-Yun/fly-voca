@@ -7,14 +7,14 @@ T4 (87_dale_test.py) measured flyvoca.graph.build() at w_syn=0.275 giving
 162.6 Hz, not 71.9. This reproduces the reference-matrix path directly to
 settle which number is which, so the T4 report cites the right one.
 """
-from bodysnatch.reference import matrix, MN9
-from bodysnatch.sim import Brain, Params
+from voca.reference import matrix, MN9
+from flyvoca.sim import Brain, Params
 
 idx, W = matrix()
 mn9 = idx[MN9]
 brain = Brain(W, Params(w_syn=0.275, sigma_v=0.0, r_spont=0.0))
 # same ref-20 ids used in 87_dale_test.py / 14_calibrate_wsyn.py
-from bodysnatch.reference import SUGAR as REF_SUGAR
+from voca.reference import SUGAR as REF_SUGAR
 ref = [i for i in REF_SUGAR if i in idx]
 stim = [idx[i] for i in ref]
 print(f"ref-20 present in reference matrix: {len(ref)}/21")

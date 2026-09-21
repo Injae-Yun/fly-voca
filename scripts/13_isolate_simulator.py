@@ -5,7 +5,7 @@ If it stays near 160 Hz, the simulator differs from Brian2.
 """
 import numpy as np, pandas as pd
 from scipy import sparse
-from bodysnatch.sim import Brain, Params
+from flyvoca.sim import Brain, Params
 
 S = "."  # directory holding the reference repo files
 comp = pd.read_csv(S + "/ref_comp783.csv", index_col=0)

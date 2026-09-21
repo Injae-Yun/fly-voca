@@ -24,7 +24,7 @@ import pandas as pd
 
 from flyvoca.banc_graph import build, select, leg_motor, spontaneous_groups
 from flyvoca.paths import cache
-from bodysnatch.sim import Brain, Params
+from flyvoca.sim import Brain, Params
 
 meta, W, _, st = build()
 print("graph:", st)

@@ -13,8 +13,8 @@ import pandas as pd
 
 from flyvoca.graph import build
 from flyvoca.paths import cache
-from bodysnatch.sim import Brain, Params
-from bodysnatch.monoamine import split_by_transmitter, SlowEdges
+from flyvoca.sim import Brain, Params
+from voca.monoamine import split_by_transmitter, SlowEdges
 
 W_SYN, TRIALS, BLOCK = 0.20, 8, 250.0
 ON, OFF, TAU, GAIN = 40, 16, 20.0, 6.0

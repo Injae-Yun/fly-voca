@@ -11,10 +11,10 @@ from scipy import sparse
 
 from flyvoca.graph import build, load_meta
 from flyvoca.paths import DATA_ROOT
-from bodysnatch.sim import Brain, Params
-from bodysnatch import reference as ref
-from bodysnatch.peptide import Field, Expression
-from bodysnatch.expression import fill, releasers
+from flyvoca.sim import Brain, Params
+from voca import reference as ref
+from voca.peptide import Field, Expression
+from voca.expression import fill, releasers
 
 REF = DATA_ROOT / "reference"
 

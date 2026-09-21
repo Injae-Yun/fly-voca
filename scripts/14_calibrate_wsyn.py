@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 from flyvoca.graph import build
-from bodysnatch.sim import Brain, Params
+from flyvoca.sim import Brain, Params
 
 TARGET_MN9 = 67.0
 REF_PEAK = 114.3

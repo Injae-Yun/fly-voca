@@ -19,7 +19,7 @@ holds, and under what slow mechanism". Two passes over one design:
              anyone at all outlast it. (Expected: recruitment yes,
              persistence no -- there is no slow element.)
   gain > 0   the monoaminergic edges switched on as a slow layer
-             (`bodysnatch.monoamine`). The mechanism is brain-wide; if the
+             (`voca.monoamine`). The mechanism is brain-wide; if the
              cells that persist are specific to aIPg / pC1d+e and absent
              for pC1d alone, for sugar, and for 37 random cells, that is
              the anatomy speaking.
@@ -51,8 +51,8 @@ import pandas as pd
 
 from flyvoca.graph import build
 from flyvoca.paths import cache
-from bodysnatch.sim import Brain, Params
-from bodysnatch.monoamine import split_by_transmitter, SlowEdges
+from flyvoca.sim import Brain, Params
+from voca.monoamine import split_by_transmitter, SlowEdges
 
 import os
 SMOKE = bool(os.environ.get("A6_SMOKE"))

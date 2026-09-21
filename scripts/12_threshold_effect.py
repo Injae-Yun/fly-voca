@@ -9,7 +9,7 @@ few percent of E/I imbalance is not a few percent of firing rate.
 import numpy as np
 
 from flyvoca.graph import build
-from bodysnatch.sim import Brain
+from flyvoca.sim import Brain
 
 MN9 = 720575940660219265
 REF_SUGAR = [

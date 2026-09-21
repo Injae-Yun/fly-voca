@@ -1,13 +1,13 @@
 """T5 -- regression checks after T1/T4.
 
-Nothing in flyvoca/*.py or bodysnatch/sim.py was touched by this debugging
+Nothing in flyvoca/*.py or core/flyvoca/sim.py was touched by this debugging
 pass (T4's build_dale() lives in its own script, 87_dale_test.py). These
 checks confirm that is true operationally, not just by diff:
 
   1. BANC: looming still moves leg motor neurons the way it did before this
      session (the positive control the whole trace in 86_trace_sugar.py
      leans on).
-  2. FAFB: the edge-level sugar -> MN9 benchmark (doc 02, bodysnatch/scripts/
+  2. FAFB: the edge-level sugar -> MN9 benchmark (doc 02, voca/scripts/
      14_calibrate_wsyn.py) is unchanged -- same w_syn=0.275, same ref-20
      stim, same MN9 readout.
 """
@@ -17,8 +17,8 @@ import pandas as pd
 from flyvoca.banc_graph import build as banc_build, select as banc_select, \
     leg_motor, spontaneous_groups
 from flyvoca.graph import build as fafb_build
-from bodysnatch.sim import Brain, Params
-from bodysnatch.reference import SUGAR as REF_SUGAR, MN9
+from flyvoca.sim import Brain, Params
+from voca.reference import SUGAR as REF_SUGAR, MN9
 
 print("=== 1. BANC: looming -> leg motor neurons (positive control) ===")
 meta, W, _, st = banc_build()

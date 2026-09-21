@@ -16,9 +16,9 @@ import numpy as np
 import pandas as pd
 
 from flyvoca.graph import build
-from bodysnatch.sim import Brain
-from bodysnatch.peptide import Field, Expression
-from bodysnatch.expression import fill, releasers
+from flyvoca.sim import Brain
+from voca.peptide import Field, Expression
+from voca.expression import fill, releasers
 
 meta, W, _, _ = build()
 brain = Brain.from_meta(W, meta)

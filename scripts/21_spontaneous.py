@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 from flyvoca.graph import build
-from bodysnatch.sim import Brain, Params
+from flyvoca.sim import Brain, Params
 
 meta, W, _, _ = build()
 central = meta[meta["super_class"] == "central"]["idx"].values

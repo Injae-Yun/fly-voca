@@ -15,8 +15,8 @@ import numpy as np
 import pandas as pd
 
 from flyvoca.graph import build, select
-from bodysnatch.sim import Brain
-from bodysnatch.state import AXES, read as read_state
+from flyvoca.sim import Brain
+from voca.state import AXES, read as read_state
 
 CONDITIONS = {
     "baseline":   dict(),

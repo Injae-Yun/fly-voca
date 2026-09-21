@@ -17,7 +17,7 @@ one of them directly:
   monoamines   DA/SER/OCT edges are routed to W_slow (doc 13 / graph.py). Real
                synapse counts, onto real cells, straight from the connectome.
 
-  peptides     never in the connectome -- releasers() (bodysnatch/expression.py)
+  peptides     never in the connectome -- releasers() (voca/expression.py)
                reports cell types measured by RNA profiling (GSE271123) to
                express a neuropeptide gene. Their anatomical contacts are
                still classical (ACh/GABA/Glu co-release), so contact counts
@@ -33,7 +33,7 @@ import pandas as pd
 
 from flyvoca.graph import build
 from flyvoca.paths import cache
-from bodysnatch.expression import releasers
+from voca.expression import releasers
 
 MIN_SYN = 3
 BACK_THRESHOLD = 10  # "excitatory synapses back from the loop" to call a closed loop
